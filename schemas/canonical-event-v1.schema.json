@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://sentrix.local/schemas/canonical-event-v1.schema.json",
+  "title": "SENTRIX canonical security event submission",
+  "type": "object",
+  "required": ["source", "event_type"],
+  "properties": {
+    "schema_version": {"const": "1.0", "default": "1.0"},
+    "source": {"type": "string", "minLength": 1, "maxLength": 200},
+    "event_type": {"type": "string", "minLength": 1, "maxLength": 200},
+    "event_timestamp": {"type": ["string", "null"], "format": "date-time"},
+    "observed_timestamp": {"type": ["string", "null"], "format": "date-time"},
+    "severity": {"type": ["string", "null"], "maxLength": 50},
+    "host": {"type": ["string", "null"], "maxLength": 500},
+    "user": {"type": ["string", "null"], "maxLength": 500},
+    "source_ip": {"type": ["string", "null"], "format": "ip"},
+    "destination_ip": {"type": ["string", "null"], "format": "ip"},
+    "process_name": {"type": ["string", "null"], "maxLength": 500},
+    "raw_event": {},
+    "normalized_fields": {"type": "object"}
+  },
+  "additionalProperties": true
+}

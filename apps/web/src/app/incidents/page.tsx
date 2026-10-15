@@ -1,0 +1,4 @@
+export default function IncidentsPage() {
+  return <div className="mx-auto max-w-5xl space-y-7"><header><p className="eyebrow">Analyst workflow</p><h1 className="mt-2 text-3xl font-semibold tracking-tight">Incident management</h1><p className="muted mt-2 text-sm">Incident grouping depends on validated event relationships.</p></header><section className="panel p-8 sm:p-12"><span className="inline-flex rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1 text-xs font-medium text-amber-100">Not implemented</span><h2 className="mt-5 text-xl font-semibold">No incident queue is available yet</h2><p className="muted mt-2 max-w-2xl text-sm leading-6">SENTRIX Foundation MVP stores and displays events. It does not correlate events or create incidents, so this page intentionally shows no incident count or generated findings.</p></section></div>;
+}
+

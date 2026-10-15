@@ -1,0 +1,11 @@
+{
+  "dataset_id": "sentrix-foundation-synthetic-v1",
+  "synthetic": true,
+  "purpose": "Exercise event ingestion, persistence, filtering, and UI rendering only.",
+  "not_ground_truth": true,
+  "records_file": "events.jsonl",
+  "record_count": 5,
+  "generation": "Hand-authored deterministic examples; no real telemetry or environment observations.",
+  "ip_ranges": ["192.0.2.0/24", "198.51.100.0/24", "203.0.113.0/24", "2001:db8::/32"]
+}
+
