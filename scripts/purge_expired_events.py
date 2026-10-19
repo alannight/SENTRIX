@@ -5,7 +5,7 @@ from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import delete, func, select
 
-from sentrix.core.config import get_settings
+from sentrix.core.config import MAX_EVENT_RETENTION_DAYS, get_settings
 from sentrix.db.session import create_session_factory
 from sentrix.events.models import SecurityEvent
 
@@ -29,8 +29,11 @@ def main() -> int:
         if args.older_than_days is None
         else args.older_than_days
     )
-    if days <= 0:
-        parser.error("set SENTRIX_EVENT_RETENTION_DAYS or pass --older-than-days greater than zero")
+    if not 1 <= days <= MAX_EVENT_RETENTION_DAYS:
+        parser.error(
+            "retention days must be between 1 and "
+            f"{MAX_EVENT_RETENTION_DAYS} (inclusive)"
+        )
 
     cutoff = datetime.now(UTC) - timedelta(days=days)
     engine, factory = create_session_factory(

@@ -1,6 +1,5 @@
 import pytest
 from pydantic import ValidationError
-
 from sentrix.core.config import Settings
 
 

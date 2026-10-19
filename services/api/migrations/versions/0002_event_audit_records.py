@@ -24,9 +24,7 @@ def upgrade() -> None:
         sa.Column("occurred_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(
-        "ix_event_audit_records_occurred_at", "event_audit_records", ["occurred_at"]
-    )
+    op.create_index("ix_event_audit_records_occurred_at", "event_audit_records", ["occurred_at"])
 
 
 def downgrade() -> None:

@@ -1,6 +1,13 @@
 from datetime import UTC, datetime
 
+from sentrix.core.config import Settings
+from sentrix.db.base import Base
 from sentrix.events.schemas import fingerprint_for
+from sentrix.main import create_app
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+from tests.conftest import ASGISyncClient
 
 
 def payload(**overrides):
@@ -151,14 +158,6 @@ def test_database_failure_does_not_report_success_or_leak_connection_details(cli
 
 
 def test_event_survives_application_recreation(tmp_path):
-    from sqlalchemy import create_engine
-    from sqlalchemy.orm import sessionmaker
-
-    from sentrix.core.config import Settings
-    from sentrix.db.base import Base
-    from sentrix.main import create_app
-    from tests.conftest import ASGISyncClient
-
     database_url = f"sqlite:///{tmp_path / 'restart.db'}"
     first_engine = create_engine(database_url, connect_args={"check_same_thread": False})
     Base.metadata.create_all(first_engine)

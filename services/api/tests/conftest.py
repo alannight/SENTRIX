@@ -9,14 +9,13 @@ os.environ.setdefault("SENTRIX_ENV", "test")
 
 import httpx
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
-
 from sentrix.core.config import Settings
 from sentrix.db.base import Base
 from sentrix.events import models as _models  # noqa: F401
 from sentrix.main import create_app
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 
 class ASGISyncClient:

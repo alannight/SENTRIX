@@ -95,7 +95,7 @@ Retention is disabled by default (`SENTRIX_EVENT_RETENTION_DAYS=0`). Set a posit
 uv run --project services/api python scripts/purge_expired_events.py
 ```
 
-The command only deletes after explicit `--apply`; `--older-than-days N` can override the configured period for one run. It removes expired event rows and keeps metadata-only audit records. Schedule it through an operator-controlled job only after reviewing the preview and backup policy.
+The command only deletes after explicit `--apply`; `--older-than-days N` can override the configured period for one run from 1 to 36,500 days. It removes expired event rows and keeps metadata-only audit records. Schedule it through an operator-controlled job only after reviewing the preview and backup policy.
 
 ## Checks
 
@@ -122,7 +122,7 @@ Request bodies are capped, CORS origins are explicit, API errors omit connection
 
 The current API calls synchronous SQLAlchemy operations from async handlers; slow database work can block the event loop. Treat this as a development-only limitation and revisit the session/handler model before shared or higher-throughput use.
 
-See [Threat Model](docs/THREAT_MODEL.md), [Test Strategy](docs/TEST_STRATEGY.md), [Canonical Schema](docs/data-dictionary/CANONICAL_EVENT_SCHEMA.md), and [Architecture](docs/architecture/TO_BE_ARCHITECTURE.md).
+See [Threat Model](docs/THREAT_MODEL.md), [Test Strategy](docs/TEST_STRATEGY.md), [Canonical Schema](docs/data-dictionary/CANONICAL_EVENT_SCHEMA.md), [As-Is Architecture](docs/architecture/AS_IS_ARCHITECTURE.md), [Phase A verification](docs/audit/PHASE_A_VERIFICATION_2026-10-19.md), and the [correlation readiness contract](docs/CORRELATION_READINESS.md).
 
 ## Troubleshooting
 

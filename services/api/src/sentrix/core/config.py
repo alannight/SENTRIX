@@ -6,6 +6,8 @@ from urllib.parse import urlparse
 from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+MAX_EVENT_RETENTION_DAYS = 36_500
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -19,15 +21,13 @@ class Settings(BaseSettings):
     )
 
     app_env: str = "development"
-    database_url: str = Field(
-        validation_alias=AliasChoices("DATABASE_URL", "database_url")
-    )
+    database_url: str = Field(validation_alias=AliasChoices("DATABASE_URL", "database_url"))
     cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
     max_request_bytes: int = Field(default=262_144, ge=1_024, le=2_097_152)
     db_pool_size: int = Field(default=5, ge=1, le=50)
     db_max_overflow: int = Field(default=5, ge=0, le=100)
     db_pool_timeout_seconds: int = Field(default=30, ge=1, le=300)
-    event_retention_days: int = Field(default=0, ge=0, le=36_500)
+    event_retention_days: int = Field(default=0, ge=0, le=MAX_EVENT_RETENTION_DAYS)
 
     @field_validator("cors_origins", mode="before")
     @classmethod

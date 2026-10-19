@@ -1,25 +1,29 @@
-# SENTRIX — Implementation Status
+# SENTRIX — Current Implementation Status
 
-**As of:** 2026-10-19  
-**Evidence base:** Current source tree, project documentation, and Git status. Checks were not run during this status refresh.
+**As of:** 2026-10-19
+**Baseline commit:** `d68e221` (`main`, tracking `origin/main`)
+**Current verification:** See [Phase A verification report](PHASE_A_VERIFICATION_2026-10-19.md).
+**Scope:** Foundation MVP only; no correlation or incident workflow.
 
-## Current state
+## Capability status
 
-| Capability | Status | Evidence / limitation |
+| Capability | Status | Evidence and limit |
 |---|---|---|
-| Repository and source history | PARTIAL | Git metadata is valid and contains one initial commit; implementation history beyond it is unavailable. |
-| Project documentation | IMPLEMENTED | README, charter, architecture, threat model, test strategy, evaluation plan, and roadmap are present. Some historical reports describe earlier workspace states and should be read with their dates. |
-| Backend application and API | IMPLEMENTED | FastAPI health, ingestion, list, and detail routes are present. Database access uses synchronous SQLAlchemy from async handlers. |
-| Canonical schema and persistence | IMPLEMENTED | Versioned event schema, raw JSON preservation, PostgreSQL model, and Alembic migrations are present. |
-| Request and persistence hardening | PARTIAL | Request size/CORS validation, bounded DB pool configuration, request IDs, and transactionally coupled ingestion audit metadata exist. Caller authentication and read audit are absent. |
-| Retention | PARTIAL | Configurable event age and explicit preview/apply cleanup command exist; scheduling and backup/restore are operational follow-up. |
-| Frontend | PARTIAL | Overview, event list/detail, and an explicit incident placeholder are present. Current build and browser behavior were not verified in this refresh. |
-| Synthetic fixture | IMPLEMENTED | Deterministic, clearly labeled local fixture and loopback-only loader are present. |
-| Correlation and incident workflow | MISSING | No correlation engine, evidence model, analyst decisions, or incident lifecycle exists. |
-| Authentication and authorization | MISSING | API access is unauthenticated; keep bound to a trusted development machine. |
-| Tests and CI | PARTIAL | Backend test files exist. No checks were run in this refresh; frontend/runtime and PostgreSQL integration remain unverified. |
-| Production readiness | MISSING | No identity/access controls, TLS/deployment controls, backup/restore, operational retention scheduler, or production validation. |
+| Repository and history | VERIFIED | Valid Git repository, `main` at `d68e221`; two commits visible. Baseline working tree was clean. |
+| API health and database reporting | IMPLEMENTED; SQLite-tested | `services/api/src/sentrix/api/routes/health.py`; tests use isolated SQLite. PostgreSQL connectivity was unavailable in this environment. |
+| Event ingestion and validation | IMPLEMENTED; SQLite-tested | `api/routes/events.py`, `events/schemas.py`, `events/service.py`; bounded JSON, schema version, IP/time validation, UTC normalization, raw JSON structure preservation. |
+| Event persistence and migrations | IMPLEMENTED; SQLite migration-tested | `events/models.py`, Alembic revisions `0001` and `0002`; migrations reach `0002_event_audit_records` and `alembic check` reports no drift on isolated SQLite. PostgreSQL migration remains unverified. |
+| Event listing and detail | IMPLEMENTED; SQLite-tested | `GET /events` supports filters, stable order, bounded pagination; `GET /events/{id}` retrieves persisted records. |
+| Request and ingestion controls | PARTIAL | Size limit, exact-origin CORS, bounded pool settings, server request ID, transactional ingestion audit metadata. No authenticated actor or read-access audit. |
+| Retention | IMPLEMENTED; CLI bounds regression-tested | Preview by default; deletes only with `--apply`; override is limited to 1–36,500 days. No scheduler or backup/restore process. |
+| Web application | PARTIAL | Overview, explorer, detail, API loading/error/empty states, incident placeholder. Dependencies installed for Phase A; typecheck and lint pass after a fix. Production build is blocked by local worker process binding under Turbopack; the Webpack fallback also failed. Browser behavior remains unverified. No package lockfile exists. |
+| Synthetic data and loader | IMPLEMENTED in source; HTTP loader NOT RUN | Labeled fixture and loopback-target guard in `scripts/load_synthetic.py`. End-to-end HTTP was blocked by local socket restrictions. |
+| Correlation and incident lifecycle | MISSING / DEFERRED BY DESIGN | No correlation engine, evidence edges, analyst decisions, incident model, or lifecycle endpoints were found. |
+| Authentication and authorization | MISSING CONTROL | API is unauthenticated; any caller who can reach it can read raw submitted telemetry. Local-only development assumption; not suitable for public/shared deployment. |
+| Production operations | MISSING CONTROL | No verified PostgreSQL deployment, TLS termination, secret manager, backup/restore, retention scheduler, monitoring, or deployment controls. |
 
-## Audit disposition
+## Evidence rules
 
-The Foundation MVP implements a local event intake and exploration vertical slice. This status does not certify the current code by execution: follow `docs/IMPLEMENTATION_REPORT_PHASE_1.md` for dated prior verification evidence and rerun the documented checks in the intended environment. Do not expose this service publicly. Correlation and incident features remain out of scope until the data and evaluation prerequisites in the roadmap are met.
+`IMPLEMENTED; SQLite-tested` refers to executed in-process tests, not PostgreSQL or browser behavior. See the verification report for exact commands and blocked checks. The 19 passing backend tests include new migration-path and retention-override regression coverage; they do not certify the external runtime workflow.
+
+The historical 15 October empty-workspace observation remains in [INITIAL_AUDIT.md](INITIAL_AUDIT.md). It describes that earlier snapshot and has not been rewritten to imply that source existed then.

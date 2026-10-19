@@ -3,11 +3,10 @@
 from logging.config import fileConfig
 
 from alembic import context
-from sqlalchemy import engine_from_config, pool
-
 from sentrix.core.config import get_settings
 from sentrix.db.base import Base
 from sentrix.events import models as _event_models  # noqa: F401
+from sqlalchemy import engine_from_config, pool
 
 config = context.config
 if config.config_file_name is not None:
