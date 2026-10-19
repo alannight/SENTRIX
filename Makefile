@@ -1,4 +1,4 @@
-.PHONY: db-up db-down migrate api test lint format web-install web-check web-build seed
+.PHONY: db-up db-down migrate api test lint format web-install web-check web-build seed retention-preview retention-apply
 
 db-up:
 	docker compose up -d db
@@ -33,3 +33,8 @@ web-build:
 seed:
 	uv run --project services/api python scripts/load_synthetic.py
 
+retention-preview:
+	uv run --project services/api python scripts/purge_expired_events.py
+
+retention-apply:
+	uv run --project services/api python scripts/purge_expired_events.py --apply

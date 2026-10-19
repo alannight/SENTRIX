@@ -41,9 +41,19 @@ async def submit_event(
         ) from None
     except SQLAlchemyError:
         session.rollback()
-        logger.error("Event persistence failed", extra={"operation": "event_ingest"})
+        logger.error(
+            "Event persistence failed",
+            extra={"operation": "event_ingest", "request_id": request.state.request_id},
+        )
         raise HTTPException(status_code=503, detail="Event could not be persisted") from None
-    logger.info("Event persisted", extra={"event_id": str(event.id), "operation": "event_ingest"})
+    logger.info(
+        "Event persisted",
+        extra={
+            "event_id": str(event.id),
+            "operation": "event_ingest",
+            "request_id": request.state.request_id,
+        },
+    )
     return EventAccepted(
         id=event.id,
         status="persisted",

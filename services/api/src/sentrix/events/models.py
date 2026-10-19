@@ -38,3 +38,16 @@ class SecurityEvent(Base):
     parser_version: Mapped[str] = mapped_column(String(50), nullable=False)
     event_fingerprint: Mapped[str] = mapped_column(String(128), nullable=False)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False)
+
+
+class EventAuditRecord(Base):
+    """Append-only record of event ingestion; excludes submitted telemetry."""
+
+    __tablename__ = "event_audit_records"
+    __table_args__ = (Index("ix_event_audit_records_occurred_at", "occurred_at"),)
+
+    id: Mapped[UUID] = mapped_column(primary_key=True)
+    action: Mapped[str] = mapped_column(String(50), nullable=False)
+    event_id: Mapped[UUID] = mapped_column(nullable=False)
+    actor: Mapped[str] = mapped_column(String(100), nullable=False)
+    occurred_at: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False)

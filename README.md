@@ -21,6 +21,8 @@ Synthetic or external event producer
 
 The API is a modular monolith. PostgreSQL is the documented local runtime database. Tests use an isolated in-memory SQLite database and do not touch the local PostgreSQL volume.
 
+The API now supports configurable database pool bounds and writes a metadata-only ingestion audit record in the same transaction as each event. Responses include a server-generated `X-Request-ID` for log correlation. These controls do not identify callers or record read access.
+
 ## Prerequisites
 
 - Python 3.12 or newer (the lock resolution uses Python 3.12 when available)
@@ -85,6 +87,16 @@ curl -i http://127.0.0.1:8000/api/v1/events \
 
 The loader skips records whose deterministic raw-payload fingerprint already exists. It refuses non-loopback or non-HTTP targets. Dataset manifest: `datasets/synthetic/manifest.json`.
 
+## Retention
+
+Retention is disabled by default (`SENTRIX_EVENT_RETENTION_DAYS=0`). Set a positive day count to configure a policy, then preview the cleanup with:
+
+```sh
+uv run --project services/api python scripts/purge_expired_events.py
+```
+
+The command only deletes after explicit `--apply`; `--older-than-days N` can override the configured period for one run. It removes expired event rows and keeps metadata-only audit records. Schedule it through an operator-controlled job only after reviewing the preview and backup policy.
+
 ## Checks
 
 ```sh
@@ -93,7 +105,7 @@ uv run --project services/api --extra dev ruff check --config services/api/pypro
 cd apps/web && npm run typecheck && npm run lint && npm run build
 ```
 
-Convenience targets are available through `make db-up`, `make migrate`, `make api`, `make test`, `make lint`, `make web-check`, `make web-build`, and `make seed`.
+Convenience targets are available through `make db-up`, `make migrate`, `make api`, `make test`, `make lint`, `make web-check`, `make web-build`, `make seed`, `make retention-preview`, and `make retention-apply`.
 
 ## API
 
@@ -106,7 +118,7 @@ Event occurrence time is optional and never inferred. If observed time is not su
 
 ## Security and limitations
 
-Request bodies are capped, CORS origins are explicit, API errors omit connection details and Pydantic input values, and logs do not include submitted payloads. Database migrations are explicit; startup does not create tables. Raw telemetry is available to any caller that can reach this unauthenticated development API. There is no identity/authentication layer, authorization, analyst audit trail, retention control, TLS termination, or production secret management. Do not expose this service beyond a trusted development machine.
+Request bodies are capped, CORS origins are explicit, API errors omit connection details and Pydantic input values, and logs do not include submitted payloads. Database migrations are explicit; startup does not create tables. Raw telemetry is available to any caller that can reach this unauthenticated development API. The ingestion audit table records operation, event ID, actor class, and time, but does not identify a person or log reads. There is no identity/authentication layer, authorization, TLS termination, or production secret management. Do not expose this service beyond a trusted development machine.
 
 The current API calls synchronous SQLAlchemy operations from async handlers; slow database work can block the event loop. Treat this as a development-only limitation and revisit the session/handler model before shared or higher-throughput use.
 

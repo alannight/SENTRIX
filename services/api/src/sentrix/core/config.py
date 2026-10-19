@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     )
     cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
     max_request_bytes: int = Field(default=262_144, ge=1_024, le=2_097_152)
+    db_pool_size: int = Field(default=5, ge=1, le=50)
+    db_max_overflow: int = Field(default=5, ge=0, le=100)
+    db_pool_timeout_seconds: int = Field(default=30, ge=1, le=300)
+    event_retention_days: int = Field(default=0, ge=0, le=36_500)
 
     @field_validator("cors_origins", mode="before")
     @classmethod

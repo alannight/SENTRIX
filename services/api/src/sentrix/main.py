@@ -4,6 +4,7 @@ import json
 from collections.abc import Awaitable, Callable
 from contextlib import asynccontextmanager
 from typing import Any
+from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -65,6 +66,29 @@ class RequestSizeLimitMiddleware:
         await self.app(scope, replay, send)
 
 
+class RequestIdMiddleware:
+    """Attach a server-generated request ID to ASGI state and the response."""
+
+    def __init__(self, app: Any) -> None:
+        self.app = app
+
+    async def __call__(self, scope: dict, receive: Callable, send: Callable) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        request_id = str(uuid4())
+        scope.setdefault("state", {})["request_id"] = request_id
+
+        async def send_with_request_id(message: dict) -> None:
+            if message["type"] == "http.response.start":
+                headers = list(message.get("headers", []))
+                headers.append((b"x-request-id", request_id.encode("ascii")))
+                message["headers"] = headers
+            await send(message)
+
+        await self.app(scope, receive, send_with_request_id)
+
+
 def create_app(
     settings: Settings | None = None,
     engine_override: Any = None,
@@ -76,7 +100,12 @@ def create_app(
         engine = engine_override
         session_factory = session_factory_override
     else:
-        engine, session_factory = create_session_factory(settings.database_url)
+        engine, session_factory = create_session_factory(
+            settings.database_url,
+            pool_size=settings.db_pool_size,
+            max_overflow=settings.db_max_overflow,
+            pool_timeout_seconds=settings.db_pool_timeout_seconds,
+        )
     if session_factory is None:
         raise ValueError("A session factory is required when overriding the database engine")
 
@@ -97,6 +126,7 @@ def create_app(
     app.state.engine = engine
     app.state.session_factory = session_factory
     app.add_middleware(RequestSizeLimitMiddleware, max_bytes=settings.max_request_bytes)
+    app.add_middleware(RequestIdMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,

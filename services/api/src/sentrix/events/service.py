@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from sqlalchemy.orm import Session
 
-from sentrix.events.models import SecurityEvent
+from sentrix.events.models import EventAuditRecord, SecurityEvent
 from sentrix.events.schemas import (
     MAX_RAW_EVENT_BYTES,
     PARSER_NAME,
@@ -59,6 +59,15 @@ def create_event(
         created_at=now,
     )
     session.add(event)
+    session.add(
+        EventAuditRecord(
+            id=uuid4(),
+            action="event.ingested",
+            event_id=event.id,
+            actor="unauthenticated-api-client",
+            occurred_at=now,
+        )
+    )
     session.commit()
     session.refresh(event)
     return event
