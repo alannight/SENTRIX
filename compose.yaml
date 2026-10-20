@@ -14,7 +14,50 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    networks:
+      - sentrix-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env}
+      SENTRIX_APP_ENV: ${SENTRIX_APP_ENV:-production}
+      SENTRIX_CORS_ORIGINS: ${SENTRIX_CORS_ORIGINS:-http://localhost:3000}
+      SENTRIX_MAX_REQUEST_BYTES: ${SENTRIX_MAX_REQUEST_BYTES:-262144}
+      SENTRIX_DB_POOL_SIZE: ${SENTRIX_DB_POOL_SIZE:-5}
+      SENTRIX_DB_MAX_OVERFLOW: ${SENTRIX_DB_MAX_OVERFLOW:-5}
+      SENTRIX_DB_POOL_TIMEOUT_SECONDS: ${SENTRIX_DB_POOL_TIMEOUT_SECONDS:-30}
+      SENTRIX_EVENT_RETENTION_DAYS: ${SENTRIX_EVENT_RETENTION_DAYS:-0}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - sentrix-net
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api/v1}
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api/v1}
+    depends_on:
+      - backend
+    networks:
+      - sentrix-net
+    restart: unless-stopped
 
 volumes:
   sentrix-postgres-data:
 
+networks:
+  sentrix-net:
+    driver: bridge

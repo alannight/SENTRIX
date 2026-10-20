@@ -11,3 +11,5 @@ __pycache__/
 *.sqlite3
 coverage.xml
 htmlcov/
+docs/
+.gitignore

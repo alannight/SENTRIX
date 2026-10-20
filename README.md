@@ -1,133 +1,120 @@
-# SENTRIX
+# SENTRIX — Security Event Investigation Platform
 
-SENTRIX (Security Event Correlation & Investigation Platform) is an investigation workspace for connecting security telemetry with explicit evidence. The **Foundation MVP** implements one reliable data path: submit an event, validate and normalize it, persist it, retrieve it, and inspect it in a web interface.
+A traceable security event ingestion and investigation workspace.
 
-## Current scope
-
-Implemented scope is event ingestion and exploration. The API preserves the submitted JSON value, exposes canonical fields and parser version, records UTC ingestion timestamps, supports filters and bounded pagination, and uses Alembic migrations. The web app reads live API records and clearly indicates when the API is unavailable.
-
-Correlation, incident creation, analyst decisions, authentication/authorization, production deployment controls, and detection-performance evaluation are **not implemented**. Synthetic records are test/demo inputs only; they are not real telemetry or correlation ground truth. This foundation is not production-ready and should not be exposed publicly.
-
-## Architecture
-
-```text
-Synthetic or external event producer
-  → FastAPI request size limit and Pydantic validation
-  → canonical field normalization (schema 1.0)
-  → SQLAlchemy transaction and PostgreSQL JSON persistence
-  → filtered, paginated investigation API
-  → Next.js overview, event explorer, and event detail
+```
+SENTRIX/
+├── frontend/          ← Next.js 16 web application
+│   ├── Dockerfile
+│   ├── src/
+│   └── ...
+├── backend/           ← FastAPI + SQLAlchemy API
+│   ├── Dockerfile
+│   ├── src/sentrix/
+│   ├── migrations/    (Alembic)
+│   └── ...
+├── compose.yaml       ← Full stack: db + backend + frontend
+├── .env.example
+└── Makefile           ← Convenience targets
 ```
 
-The API is a modular monolith. PostgreSQL is the documented local runtime database. Tests use an isolated in-memory SQLite database and do not touch the local PostgreSQL volume.
+---
 
-The API now supports configurable database pool bounds and writes a metadata-only ingestion audit record in the same transaction as each event. Responses include a server-generated `X-Request-ID` for log correlation. These controls do not identify callers or record read access.
+## Quick Start (Local Development)
 
-## Prerequisites
+### 1. Prerequisites
+- Docker + Docker Compose
+- Node.js 22+
+- Python 3.12+
+- [uv](https://docs.astral.sh/uv/) (Python package manager)
 
-- Python 3.12 or newer (the lock resolution uses Python 3.12 when available)
-- `uv`
-- Node.js 20.9 or newer and npm
-- Docker Engine with Docker Compose access for the PostgreSQL development service
-
-## Local setup
-
-From the repository root:
-
-```sh
+### 2. Environment
+```bash
 cp .env.example .env
-# Replace POSTGRES_PASSWORD and the matching password in DATABASE_URL in .env.
-uv sync --project services/api --extra dev
-cd apps/web && npm install && cd ../..
+# Edit .env — at minimum change POSTGRES_PASSWORD
 ```
 
-`.env.example` contains placeholders only. `.env` is ignored by Git. Keep the API bound to loopback for local development.
+### 3. Run the full stack with Docker
+```bash
+make docker-up
+```
+This starts Postgres, the backend API on `:8000`, and the frontend on `:3000`.
 
-## Start services
+> **Note:** When using Docker compose, update `DATABASE_URL` in `.env` to use `@db:` instead of `@localhost:`.
 
-Terminal 1 — database and migration:
+---
 
-```sh
-docker compose up -d db
-uv run --project services/api alembic -c services/api/alembic.ini upgrade head
+## Running Services Individually
+
+### Database only
+```bash
+make db-up
 ```
 
-Terminal 2 — API:
-
-```sh
-uv run --project services/api uvicorn sentrix.main:app --app-dir services/api/src --reload --host 127.0.0.1 --port 8000
+### Backend (hot-reload)
+```bash
+make migrate          # Run database migrations first
+make api              # Start FastAPI dev server on :8000
 ```
 
-OpenAPI documentation is at `http://127.0.0.1:8000/api/v1/docs`. Health is at `http://127.0.0.1:8000/api/v1/health`.
-
-Terminal 3 — web app:
-
-```sh
-cd apps/web
-npm run dev
+### Frontend (hot-reload)
+```bash
+make frontend-install # Only needed once
+make frontend-dev     # Start Next.js dev server on :3000
 ```
 
-Open `http://127.0.0.1:3000`. `NEXT_PUBLIC_API_BASE_URL` defaults to `http://localhost:8000/api/v1`; CORS defaults allow the two local web origins only.
+---
 
-## Submit a synthetic event
+## All Makefile Targets
 
-With the API running, either load the deterministic, loopback-only fixture set:
+| Target | Description |
+|---|---|
+| `make help` | Show all targets |
+| `make db-up / db-down` | Start/stop Postgres only |
+| `make docker-build` | Build all Docker images |
+| `make docker-up / docker-down` | Start/stop full stack |
+| `make migrate` | Run Alembic migrations |
+| `make api` | FastAPI dev server with hot-reload |
+| `make test` | Run pytest |
+| `make lint / format` | ruff check / format |
+| `make seed` | Load synthetic event data |
+| `make retention-preview` | Preview events to purge |
+| `make retention-apply` | Purge expired events |
+| `make frontend-install` | npm install |
+| `make frontend-dev` | Next.js dev server |
+| `make frontend-check` | typecheck + eslint |
+| `make frontend-build` | Production build |
 
-```sh
-uv run --project services/api python scripts/load_synthetic.py
-```
+---
 
-or submit one event:
+## Environment Variables
 
-```sh
-curl -i http://127.0.0.1:8000/api/v1/events \
-  -H 'Content-Type: application/json' \
-  -d '{"schema_version":"1.0","source":"manual-demo","event_type":"authentication.failure","event_timestamp":"2026-01-15T09:05:00Z","severity":"medium","user":"synthetic-user","source_ip":"192.0.2.10","raw_event":{"synthetic":true,"result":"failure"}}'
-```
+| Variable | Default | Description |
+|---|---|---|
+| `POSTGRES_DB` | — | Database name |
+| `POSTGRES_USER` | — | Database user |
+| `POSTGRES_PASSWORD` | — | Database password |
+| `DATABASE_URL` | — | SQLAlchemy connection string |
+| `SENTRIX_APP_ENV` | `production` | `development` or `production` |
+| `SENTRIX_CORS_ORIGINS` | `http://localhost:3000` | Comma-separated allowed origins |
+| `SENTRIX_MAX_REQUEST_BYTES` | `262144` | Max request body size (256 KB) |
+| `SENTRIX_EVENT_RETENTION_DAYS` | `0` | Days to keep events (0 = disabled) |
+| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:8000/api/v1` | API URL used by frontend |
 
-The loader skips records whose deterministic raw-payload fingerprint already exists. It refuses non-loopback or non-HTTP targets. Dataset manifest: `datasets/synthetic/manifest.json`.
+---
 
-## Retention
+## API Documentation
 
-Retention is disabled by default (`SENTRIX_EVENT_RETENTION_DAYS=0`). Set a positive day count to configure a policy, then preview the cleanup with:
+Swagger UI is available at: `http://localhost:8000/api/v1/docs`
 
-```sh
-uv run --project services/api python scripts/purge_expired_events.py
-```
+---
 
-The command only deletes after explicit `--apply`; `--older-than-days N` can override the configured period for one run from 1 to 36,500 days. It removes expired event rows and keeps metadata-only audit records. Schedule it through an operator-controlled job only after reviewing the preview and backup policy.
+## Tech Stack
 
-## Checks
-
-```sh
-uv run --project services/api --extra dev pytest services/api/tests -q
-uv run --project services/api --extra dev ruff check --config services/api/pyproject.toml services/api
-cd apps/web && npm run typecheck && npm run lint && npm run build
-```
-
-Convenience targets are available through `make db-up`, `make migrate`, `make api`, `make test`, `make lint`, `make web-check`, `make web-build`, `make seed`, `make retention-preview`, and `make retention-apply`.
-
-## API
-
-- `GET /api/v1/health` — application and database status separately.
-- `POST /api/v1/events` — validate, normalize, and transactionally persist one event; `201` only after commit.
-- `GET /api/v1/events` — stable ordering, page size 1–100, offset up to 10,000, and filters `event_type`, `severity`, `source`, `event_fingerprint`, `start_time`, and `end_time`.
-- `GET /api/v1/events/{event_id}` — canonical event including the structurally preserved raw JSON value.
-
-Event occurrence time is optional and never inferred. If observed time is not submitted, the API records its receipt time as `observed_timestamp`; `ingested_at` and `created_at` are also server timestamps. Datetimes must include a timezone offset and are stored/returned in UTC. Schema version `1.0` is accepted; unsupported versions are rejected. Extra submitted fields are retained in `raw_event`, not silently promoted to normalized fields. Fingerprints are deterministic identifiers, not uniqueness guarantees or deduplication decisions.
-
-## Security and limitations
-
-Request bodies are capped, CORS origins are explicit, API errors omit connection details and Pydantic input values, and logs do not include submitted payloads. Database migrations are explicit; startup does not create tables. Raw telemetry is available to any caller that can reach this unauthenticated development API. The ingestion audit table records operation, event ID, actor class, and time, but does not identify a person or log reads. There is no identity/authentication layer, authorization, TLS termination, or production secret management. Do not expose this service beyond a trusted development machine.
-
-The current API calls synchronous SQLAlchemy operations from async handlers; slow database work can block the event loop. Treat this as a development-only limitation and revisit the session/handler model before shared or higher-throughput use.
-
-See [Threat Model](docs/THREAT_MODEL.md), [Test Strategy](docs/TEST_STRATEGY.md), [Canonical Schema](docs/data-dictionary/CANONICAL_EVENT_SCHEMA.md), [As-Is Architecture](docs/architecture/AS_IS_ARCHITECTURE.md), [Phase A verification](docs/audit/PHASE_A_VERIFICATION_2026-10-19.md), and the [correlation readiness contract](docs/CORRELATION_READINESS.md).
-
-## Troubleshooting
-
-- **API cannot connect to database:** check `docker compose ps`, `.env` credentials, then rerun the migration command. The health endpoint reports database availability without returning connection details.
-- **`DATABASE_URL` missing:** copy `.env.example` to `.env`; the application intentionally fails configuration validation if no database URL is supplied.
-- **CORS error:** use `http://localhost:3000` or `http://127.0.0.1:3000`, or add the exact development origin to `SENTRIX_CORS_ORIGINS` in `.env`.
-- **API unreachable from UI:** verify the API is listening on `127.0.0.1:8000` and `NEXT_PUBLIC_API_BASE_URL` is correct.
-- **Synthetic loader refuses target:** it is intentionally restricted to local loopback HTTP and must not be pointed at production.
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 16 · React 19 · TypeScript · Tailwind CSS |
+| Backend | FastAPI · SQLAlchemy 2 · Alembic · Pydantic |
+| Database | PostgreSQL 16 |
+| Packaging | uv (Python) · npm (Node) |
+| Deployment | Docker + Docker Compose |
